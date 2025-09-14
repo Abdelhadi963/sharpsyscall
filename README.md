@@ -2,7 +2,7 @@
 
 ## How it's works ? 
 
-you know that the syscall numbers change for each windows build  right :) So we are doing the following to locate it :
+you know that the syscall numbers change for each windows build  right :)
 1. **Loads ntdll.dll** and locates the target function
 2. **Parses the first 8 bytes** of each function looking for syscall patterns:
    - `4C 8B D1 B8` (mov r10, rcx; mov eax, syscall_number) - Standard pattern
@@ -30,8 +30,8 @@ Usage examples:
 
 ## Usage example 
 for the seek of our demo let's use syscall's to create a file.
-
-so we nee to generate assembly code for syscall invoked by the native API NtCreateFile we can add NtOpenFile too for arg parser test.
+### generating NASM file
+so we need to generate assembly code for syscall invoked by the native API **NtCreateFile** we can add **NtOpenFile** too for arg parser test.
 ```powershell
 .\sharpsyscall.exe --exclude-default --syscall-stdin NtCreateFile,NtOpenFile --stdout
 ```
@@ -41,7 +41,153 @@ just remove  **--stdout** to write to the file or copy it manuly.
 ```powershell
 .\sharpsyscall.exe --exclude-default --syscall-stdin NtCreateFile,NtOpenFile
 ```
+we can see that our assembly is generated and saved to the file successfuly
 <img width="1544" height="720" alt="image" src="https://github.com/user-attachments/assets/69ef012d-5f16-40a8-9a84-b23e739555b9" />
+
+### Configuring NASM support in VS
+Now we can use [visual studio](https://learn.microsoft.com/en-us/visualstudio/install/install-visual-studio?view=vs-2022) create a simple C++ project and add the assembly file to it we can add NASM support as follows :
+go to **build dependecies** -> **build customizations** -> **check nasm box**
+<img width="846" height="906" alt="image" src="https://github.com/user-attachments/assets/792089f5-117b-4bce-ad4f-d301b297d394" />
+<img width="1432" height="382" alt="image" src="https://github.com/user-attachments/assets/b9e2af56-ca23-4dd2-bc82-b9529f263873" />
+now go to your nasm file -> **proprities** -> scroll to **Microsoft Macro Assembler**  (if you didn't get the previous step you will not be able to see this option in the menu).
+<img width="1616" height="726" alt="image" src="https://github.com/user-attachments/assets/f55da291-b863-4a45-9f56-dd7a56474b14" />
+
+### invoke the syscall
+now to use our defined asssembly stub we need to define NtCreateFile prototype since this is an NT API is not documented in the MSDN so we can use a usefull open source docs [NtCreateFile Doc][https://ntdoc.m417z.com/ntcreatefile]. We end up with the following prototype
+
+```C
+NTSTATUS SysNtCreateFile(
+    _Out_ PHANDLE FileHandle,
+    _In_ ACCESS_MASK DesiredAccess,
+    _In_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _Out_ PIO_STATUS_BLOCK IoStatusBlock,
+    _In_opt_ PLARGE_INTEGER AllocationSize,
+    _In_ ULONG FileAttributes,
+    _In_ ULONG ShareAccess,
+    _In_ ULONG CreateDisposition,
+    _In_ ULONG CreateOptions,
+    _In_reads_bytes_opt_(EaLength) PVOID EaBuffer,
+    _In_ ULONG EaLength
+);
+```
+
+then we need to create some helper function to construct file path & initial object attributes we end up with thr full following code
+```C
+#include <windows.h>
+#include <winternl.h>
+#include <stdio.h>
+
+#define STATUS_SUCCESS ((NTSTATUS)0x00000000L)
+
+// inline version of RtlInitUnicodeString
+static inline void RtlInitUnicodeString(PUNICODE_STRING DestinationString, PCWSTR SourceString) {
+    if (DestinationString) {
+        DestinationString->Length = (USHORT)(wcslen(SourceString) * sizeof(WCHAR));
+        DestinationString->MaximumLength = DestinationString->Length + sizeof(WCHAR);
+        DestinationString->Buffer = (PWSTR)SourceString;
+    }
+}
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+    // ------------------- NtCreateFile -------------------
+
+    NTSTATUS SysNtCreateFile(
+        _Out_ PHANDLE FileHandle,
+        _In_ ACCESS_MASK DesiredAccess,
+        _In_ POBJECT_ATTRIBUTES ObjectAttributes,
+        _Out_ PIO_STATUS_BLOCK IoStatusBlock,
+        _In_opt_ PLARGE_INTEGER AllocationSize,
+        _In_ ULONG FileAttributes,
+        _In_ ULONG ShareAccess,
+        _In_ ULONG CreateDisposition,
+        _In_ ULONG CreateOptions,
+        _In_reads_bytes_opt_(EaLength) PVOID EaBuffer,
+        _In_ ULONG EaLength
+    );
+
+#ifdef __cplusplus
+}
+#endif
+
+int main() {
+    OBJECT_ATTRIBUTES oa;
+    HANDLE fileHandle = NULL;
+    NTSTATUS status;
+    UNICODE_STRING fileName;
+    IO_STATUS_BLOCK osb;
+
+    // Initialize file path in NT namespace
+    RtlInitUnicodeString(&fileName, L"\\??\\C:\\ippyokai\\desktop\\test.txt");
+    InitializeObjectAttributes(&oa, &fileName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+    ZeroMemory(&osb, sizeof(osb));
+
+    // Call manual syscall stub
+    status = SysNtCreateFile(
+        &fileHandle,
+        FILE_GENERIC_WRITE,
+        &oa,
+        &osb,
+        NULL,                       
+        FILE_ATTRIBUTE_NORMAL,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        FILE_OVERWRITE_IF,
+        FILE_SYNCHRONOUS_IO_NONALERT,
+        NULL,
+        0
+    );
+
+    if (status == STATUS_SUCCESS) {
+        printf("[+] File created successfully!\n");
+        CloseHandle(fileHandle);
+    }
+    else {
+        printf("[-] NtCreateFile failed: 0x%X\n", status);
+    }
+	return 0;
+}
+```
+
+just build your solution you will see that is assembling the nasm file too from the path where you added it.
+<img width="1772" height="616" alt="image" src="https://github.com/user-attachments/assets/6952aa81-a21d-4eaf-acfd-e57d36d4dbed" />
+
+Time for the test
+<img width="1177" height="296" alt="image" src="https://github.com/user-attachments/assets/ce6f6cce-6acb-4b9b-b2ff-c77988c6c694" />
+
+file Created Sucessfully.
+
+### Windbg
+we can step on the program using WinDbg to see what exacly is going on.
+
+break at **SysNtCreateFile** & step trough your program we will hit our assembly stub. We can see tha we are calling the syscall direcly.
+```
+0:000> bp syscall!SysNtCreateFile
+0:000> g
+Breakpoint 1 hit
+syscall!SysNtCreateFile:
+00007ff6`02db1160 4c8bd1          mov     r10,rcx
+0:000> t
+syscall!SysNtCreateFile+0x3:
+00007ff6`02db1163 b855000000      mov     eax,55h
+0:000> t
+syscall!SysNtCreateFile+0x8:
+00007ff6`02db1168 0f05            syscall
+0:000> t
+syscall!SysNtCreateFile+0xa:
+00007ff6`02db116a c3              ret
+```
+<img width="1697" height="930" alt="image" src="https://github.com/user-attachments/assets/b7ba34d1-2f1c-4386-9ade-98866043ee93" />
+
+## usefull ressources 
+i would like to share the following usefull blog by  to learn more about direct syscall's https://www.outflank.nl/blog/2019/06/19/red-team-tactics-combining-direct-system-calls-and-srdi-to-bypass-av-edr/
+ 
+
+
+
+
 
 
 
