@@ -157,7 +157,7 @@ Just build your solution. You will see that it assembles the NASM file too, from
 Time for testing
 <img width="1177" height="296" alt="image" src="https://github.com/user-attachments/assets/ce6f6cce-6acb-4b9b-b2ff-c77988c6c694" />
 
-"[+] file Created Sucessfully."!!
+"[+] File Created successfully!".
 
 ### Windbg
 We can step through the program using WinDbg to see what exactly is going on.
