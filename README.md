@@ -53,7 +53,7 @@ Now go to your NASM file → **Properties** → scroll to **Microsoft Macro Asse
 <img width="1616" height="726" alt="image" src="https://github.com/user-attachments/assets/f55da291-b863-4a45-9f56-dd7a56474b14" />
 
 ### invoke the syscall
-Now, to use our defined assembly stub, we need to define the **NtCreateFile** prototype. Since this is an NT API, it is not documented in MSDN, so we can use a useful open-source doc: [NtCreateFile Doc](https://ntdoc.m417z.com/ntcreatefile).
+Now, to use our defined assembly stub, we need to define the **NtCreateFile** prototype. Since this is an NT API, it is not documented in MSDN, so we can use a useful open-source doc: [NtCreateFile Doc](https://ntdoc.m417z.com/ntcreatefile). But well this one is actualy documented [MSDN NtCreateFile docs](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/nf-ntifs-ntcreatefile).
 We end up with the following prototype:
 ```C
 NTSTATUS SysNtCreateFile(
