@@ -2,7 +2,7 @@
 
 ## How it's works ? 
 
-you know that the syscall numbers change for each windows build  right :)
+You know that the syscall numbers change for each Windows build, right? :)
 1. **Loads ntdll.dll** and locates the target function
 2. **Parses the first 8 bytes** of each function looking for syscall patterns:
    - `4C 8B D1 B8` (mov r10, rcx; mov eax, syscall_number) - Standard pattern
@@ -23,15 +23,15 @@ Usage examples:
   SharpSyscall.exe --exclude-default --syscall-stdin NtCreateFile,NtOpenFile --stdout
 ```
 
-1. **--syscall-func** : read  functions names from an input file line by line parese the result in syscalls_XXXX_XXX.nasm file in current directory.
-2. **--syscall-stdin** : read functions from stdin separated by "," and parse result to syscalls_XXXX_XXX.nasm file directory.
-3. **--exclude-default** : exclude the hardcoded list of functions usefull to when you are generating stubs for your specifc functions.
-4. **--stdout** : write the output to stout so is not saved to any file.
+1. **--syscall-func**: Read function names from an input file line by line and parse the result into a syscalls_XXXX_XXX.nasm file in the current directory.
+2. **--syscall-stdin**: Read functions from stdin, separated by “,”, and parse the result into a syscalls_XXXX_XXX.nasm file in the current directory.
+3. **--exclude-default**: Exclude the hardcoded list of functions, useful when generating stubs for your specific functions.
+4. **--stdout**: Write the output to stdout, so it is not saved to any file.
 
 ## Usage example 
-for the seek of our demo let's use syscall's to create a file.
+For the sake of our demo, let's use syscalls to create a file.
 ### generating NASM file
-so we need to generate assembly code for syscall invoked by the native API **NtCreateFile** we can add **NtOpenFile** too for arg parser test.
+So we need to generate assembly code for the syscall invoked by the native API **NtCreateFile**. We can add **NtOpenFile** too, for testing the argument parser.
 ```powershell
 .\sharpsyscall.exe --exclude-default --syscall-stdin NtCreateFile,NtOpenFile --stdout
 ```
@@ -41,20 +41,20 @@ just remove  **--stdout** to write to the file or copy it manuly.
 ```powershell
 .\sharpsyscall.exe --exclude-default --syscall-stdin NtCreateFile,NtOpenFile
 ```
-we can see that our assembly is generated and saved to the file successfuly
+We can see that our assembly is generated and saved to the file successfully.
 <img width="1544" height="720" alt="image" src="https://github.com/user-attachments/assets/69ef012d-5f16-40a8-9a84-b23e739555b9" />
 
 ### Configuring NASM support in VS
-Now we can use [visual studio](https://learn.microsoft.com/en-us/visualstudio/install/install-visual-studio?view=vs-2022) create a simple C++ project and add the assembly file to it we can add NASM support as follows :
-go to **build dependecies** -> **build customizations** -> **check nasm box**
+Now we can use Visual Studio to create a simple C++ project and add the assembly file to it. We can add NASM support as follows:
+Go to **Build Dependencies** → **Build Customizations** → **check the NASM box**.
 <img width="846" height="906" alt="image" src="https://github.com/user-attachments/assets/792089f5-117b-4bce-ad4f-d301b297d394" />
 <img width="1432" height="382" alt="image" src="https://github.com/user-attachments/assets/b9e2af56-ca23-4dd2-bc82-b9529f263873" />
-now go to your nasm file -> **proprities** -> scroll to **Microsoft Macro Assembler**  (if you didn't get the previous step you will not be able to see this option in the menu).
+Now go to your NASM file → **Properties** → scroll to **Microsoft Macro Assembler** (if you didn’t complete the previous step, you will not be able to see this option in the menu).
 <img width="1616" height="726" alt="image" src="https://github.com/user-attachments/assets/f55da291-b863-4a45-9f56-dd7a56474b14" />
 
 ### invoke the syscall
-now to use our defined asssembly stub we need to define NtCreateFile prototype since this is an NT API is not documented in the MSDN so we can use a usefull open source docs [NtCreateFile Doc][https://ntdoc.m417z.com/ntcreatefile]. We end up with the following prototype
-
+Now, to use our defined assembly stub, we need to define the **NtCreateFile** prototype. Since this is an NT API, it is not documented in MSDN, so we can use a useful open-source doc: [NtCreateFile Doc](https://ntdoc.m417z.com/ntcreatefile).
+We end up with the following prototype:
 ```C
 NTSTATUS SysNtCreateFile(
     _Out_ PHANDLE FileHandle,
@@ -71,7 +71,7 @@ NTSTATUS SysNtCreateFile(
 );
 ```
 
-then we need to create some helper function to construct file path & initial object attributes we end up with thr full following code
+Then we need to create some helper functions to construct the file path and initial object attributes. We end up with the full following code:
 ```C
 #include <windows.h>
 #include <winternl.h>
@@ -151,18 +151,18 @@ int main() {
 }
 ```
 
-just build your solution you will see that is assembling the nasm file too from the path where you added it.
+Just build your solution. You will see that it assembles the NASM file too, from the path where you added it.
 <img width="1772" height="616" alt="image" src="https://github.com/user-attachments/assets/6952aa81-a21d-4eaf-acfd-e57d36d4dbed" />
 
-Time for the test
+Time for testing
 <img width="1177" height="296" alt="image" src="https://github.com/user-attachments/assets/ce6f6cce-6acb-4b9b-b2ff-c77988c6c694" />
 
-file Created Sucessfully.
+"[+] file Created Sucessfully."!!
 
 ### Windbg
-we can step on the program using WinDbg to see what exacly is going on.
+We can step through the program using WinDbg to see what exactly is going on.
 
-break at **SysNtCreateFile** & step trough your program we will hit our assembly stub. We can see tha we are calling the syscall direcly.
+Break at **SysNtCreateFile** and step through your program. We will hit our assembly stub, and we can see that we are calling the syscall directly.
 ```
 0:000> bp syscall!SysNtCreateFile
 0:000> g
@@ -181,9 +181,10 @@ syscall!SysNtCreateFile+0xa:
 ```
 <img width="1697" height="930" alt="image" src="https://github.com/user-attachments/assets/b7ba34d1-2f1c-4386-9ade-98866043ee93" />
 
-## usefull ressources 
-i would like to share the following usefull blog by  to learn more about direct syscall's https://www.outflank.nl/blog/2019/06/19/red-team-tactics-combining-direct-system-calls-and-srdi-to-bypass-av-edr/
- 
+## Useful Resources
+
+I would like to share the following useful blog to learn more about direct syscalls: [Red Team Tactics: Combining Direct System Calls and SRDI to Bypass AV/EDR](https://www.outflank.nl/blog/2019/06/19/red-team-tactics-combining-direct-system-calls-and-srdi-to-bypass-av-edr/)
+
 
 
 
