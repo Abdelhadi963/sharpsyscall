@@ -8,7 +8,7 @@ using Microsoft.Win32;
 
 namespace sharpsyscall
 {
-    internal class sharpSyscallGen
+    internal class sharpSyscall
     {
         // -------------------------
         // P/Invoke and structs
@@ -178,7 +178,19 @@ namespace sharpsyscall
                 sb.AppendLine($"    ; {funcName} - Syscall Number: {syscallNumber}");
                 sb.AppendLine($"    {procName} proc");
                 sb.AppendLine("         mov r10, rcx");
-                sb.AppendLine($"         mov eax, {syscallNumber:X2}h");
+                // masm don't allow hex to start with a number not in 0-9 range
+                //sb.AppendLine($"         mov eax, {syscallNumber:X2}h");
+                // Ensure MASM hex literals always start with a digit (0-9)
+                // Ensure syscallNumber is treated as an int
+                int num = (int)syscallNumber;
+                string hexValue = num.ToString("X2");
+
+                // Pad with leading 0 if first digit is A-F
+                if (hexValue[0] >= 'A' && hexValue[0] <= 'F')
+                {
+                    hexValue = "0" + hexValue;
+                }
+                sb.AppendLine($"         mov eax, {hexValue}h");
                 sb.AppendLine("         syscall");
                 sb.AppendLine("         ret");
                 sb.AppendLine($"    {procName} endp");
@@ -261,12 +273,12 @@ namespace sharpsyscall
         public void Usage()
         {
             Console.WriteLine("");
-            Console.WriteLine("SharpSyscallGen - A tool to generate syscall stubs for Windows by @IppY0kai.");
+            Console.WriteLine("SharpSyscall - A C# tool to generate syscall stubs for Windows by @IppY0kai.");
             Console.WriteLine("Usage: SharpSyscallGen.exe [--syscall-func <file>] [--syscall-stdin <func1,func2,...>] [--exclude-default] [--stdout] [--help]");
             Console.WriteLine("Usage examples:");
-            Console.WriteLine("  SharpSyscallGen.exe --syscall-func syscalls.txt");
-            Console.WriteLine("  SharpSyscallGen.exe --syscall-stdin NtCreateFile,NtOpenFile");
-            Console.WriteLine("  SharpSyscallGen.exe --exclude-default --syscall-stdin NtCreateFile,NtOpenFile --stdout");
+            Console.WriteLine("  SharpSyscall.exe --syscall-func syscalls.txt");
+            Console.WriteLine("  SharpSyscall.exe --syscall-stdin NtCreateFile,NtOpenFile");
+            Console.WriteLine("  SharpSyscall.exe --exclude-default --syscall-stdin NtCreateFile,NtOpenFile --stdout");
             Console.WriteLine("");
         }
 

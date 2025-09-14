@@ -18,9 +18,9 @@ class Program
             return;
         }
 
-        var generator = new sharpSyscallGen();
+        var generator = new sharpSyscall();
 
-        Console.WriteLine("[*] SharpSyscallGen - Windows Syscall Stub Generator");
+        Console.WriteLine("[*] SharpSyscall - Windows Syscall Stub Generator");
         Console.WriteLine("[*] Detecting Windows version...");
 
         string winver = generator.GetWindowsVersion();
