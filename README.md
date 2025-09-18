@@ -1,4 +1,4 @@
-**SharSyscall** A simple C# tool to generate a NASM file to use in your visual studeo project for direct syscall in windows.
+**SharSyscall** A simple C# tool to generate a MASM file to use in your visual studeo project for direct syscall in windows.
 
 ## How it's works ? 
 
